@@ -1,10 +1,10 @@
 import React from "react";
 import axios from "axios";
-import moment, { isMoment } from "moment";
+import moment from "moment";
 import Container from "react-bootstrap/Container";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
-import { ListGroup, ListGroupItem } from "react-bootstrap";
+import { ListGroup } from "react-bootstrap";
 import "./profile-view.scss";
 
 export class ProfileView extends React.Component {
@@ -12,9 +12,9 @@ export class ProfileView extends React.Component {
     super(props);
 
     this.state = {
-      username: null,
-      email: null,
-      birthday: null,
+      username: this.props.user.Username,
+      email: this.props.user.Email,
+      birthday: this.props.user.Birthday,
       favoriteMovies: []
     };
   }
@@ -33,14 +33,14 @@ export class ProfileView extends React.Component {
   handleSubmit(event) {
     event.preventDefault();
 
-    const id = event.target.dataset.id;
-    const fMovies = this.state.favoriteMovies.map(movie => movie._id);
+    // const id = event.target.dataset.id;
+    // const fMovies = this.state.favoriteMovies.map(movie => movie._id);
 
-    let newFavMovies = fMovies.filter(movie => {
-      return id !== movie
-    })
+    // let newFavMovies = fMovies.filter(movie => {
+    //   return id !== movie
+    // })
 
-    console.log(newFavMovies)
+    // console.log(newFavMovies)
 
     axios
       .put(
@@ -49,8 +49,7 @@ export class ProfileView extends React.Component {
           Username: this.state.username,
           Password: this.state.password,
           Email: this.state.email,
-          Birthday: this.state.birthday,
-          FavoriteMovies: newFavMovies
+          Birthday: this.state.birthday
         },
         {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
@@ -76,7 +75,7 @@ export class ProfileView extends React.Component {
       })
       .then(response => {
         this.setState({
-          username: response.data.Username,
+          username: null,
           email: response.data.Email,
           birthday: response.data.Birthday,
           favoriteMovies: response.data.FavoriteMovies
@@ -84,6 +83,36 @@ export class ProfileView extends React.Component {
       })
       .catch(err => {
         console.error(err);
+      });
+  }
+
+  deleteFavorite(e, favMovie) {
+    console.log(favMovie._id);
+
+    axios
+      .delete(
+        `https://myflixapi.herokuapp.com/users/${localStorage.getItem(
+          "user"
+        )}/movies/${favMovie._id}`,
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+        }
+      )
+      .then(response => {
+        const newFavMovie = this.state.favoriteMovies.filter(newfaves => {
+          return newfaves._id !== favMovie._id;
+        });
+
+        this.setState({
+          favoriteMovies: [...newFavMovie]
+        });
+
+        console.log(response);
+        alert("Favorite Movies Updated.");
+      })
+      .catch(event => {
+        console.log("Error updating your favorite movies");
+        alert("Cannot continue. Something is wrong.");
       });
   }
 
@@ -110,7 +139,7 @@ export class ProfileView extends React.Component {
   render() {
     const { username, email, birthday, password, favoriteMovies } = this.state;
     // if (!username) return null;
-    console.log(this.state)
+    console.log(this.state);
 
     return (
       <Container className="registration-view mt-10 mb-3">
@@ -162,28 +191,25 @@ export class ProfileView extends React.Component {
               onChange={e => this.handleChange(e)}
             />
           </Form.Group>
+        </Form>
+        <h3 className="list-group-item-heading">Favorite Movies List</h3>
 
-          <h3 className="list-group-item-heading">Favorite Movies List</h3>
+        <ListGroup>
+          {favoriteMovies.map(favMovie => (
+            <ListGroup.Item key={favMovie._id}>
+              {favMovie.Title}
 
-          <ListGroup>
-            {favoriteMovies.map(favMovie => (
-              <ListGroup.Item key={favMovie._id}>
+              <Button
+                className="listGroup__delete--button btn-outline-danger"
+                variant="link"
+                data-id={favMovie._id}
+                onClick={e => this.deleteFavorite(e, favMovie)}
+              >
+                X
+              </Button>
+            </ListGroup.Item>
+          ))}
 
-                  {favMovie.Title}
-                  <Button
-                    className="btn btn-outline-danger"
-                    variant="link"
-                    data-id={favMovie._id}
-                    onClick={e => this.handleSubmit(e)}
-                  >
-                    X
-                  </Button>
-
-              </ListGroup.Item>
-            ))}
-
-
-          </ListGroup>
           <Button
             className="btn-lg btn-dark btn-block"
             type="submit"
@@ -200,13 +226,11 @@ export class ProfileView extends React.Component {
           >
             Delete Account
           </Button>
-        </Form>
+        </ListGroup>
       </Container>
     );
   }
 }
-
-
 
 // // RegistrationView.propTypes = {
 // //   onAlreadyAUserLinkClicked: PropTypes.func.isRequired
